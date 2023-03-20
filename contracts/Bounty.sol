@@ -2,12 +2,14 @@
 pragma solidity 0.8.19;
 
 contract Earn {
-    address owner;
+    address public owner;
+    uint decimals = 10 ** 18;
 
     mapping(address => bool) internal AllowedOrganizer;
     mapping(uint256 => Bounty) public AllBounties;
     mapping(uint256 => uint256) public RemainingPoolPrize;
     mapping(address => uint) public ClaimablePrize;
+    mapping(address => mapping(uint => bool)) public isParticipantOfBounty;
 
     struct Bounty {
         address Organizer;
@@ -18,12 +20,14 @@ contract Earn {
         uint256 AmountInPool;
     }
 
-    struct Submission{
+    struct Submission {
+        uint BountyIndex;
         address Participant;
         string Soultion;
     }
-    
+
     uint256[] IndexArrayForBounty;
+    Submission[] submissions;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only Owner");
@@ -35,11 +39,20 @@ contract Earn {
         _;
     }
 
+    modifier onlyBountyOrganizer(uint _bountyId) {
+        address _organizer = AllBounties[_bountyId].Organizer;
+        require(
+            msg.sender == _organizer,
+            "you are not the organizer for this bounty"
+        );
+        _;
+    }
+
     constructor() {
         owner = msg.sender;
     }
 
-    function isActive(uint256 _index) external view returns (bool) {
+    function isActive(uint256 _index) internal view returns (bool) {
         return AllBounties[_index].EndTime > block.timestamp;
     }
 
@@ -48,14 +61,19 @@ contract Earn {
         owner = _owner;
     }
 
-    function addBountiesEXperiment(
-        uint256 _duration,
+    function addOrganizer(address _organizer) external onlyOwner {
+        AllowedOrganizer[_organizer] = true;
+    }
+
+    function addBounties(
+        uint256 _durationInDays,
         string calldata _externalLink,
         uint256 _amountInPool
     ) external payable onlyOrganizer {
         require(msg.value == _amountInPool, "Send valid ether amount");
 
         uint256 _index = IndexArrayForBounty.length;
+        uint durationInseconds = _durationInDays days;
         IndexArrayForBounty.push(_index);
 
         RemainingPoolPrize[_index] = msg.value;
@@ -63,15 +81,51 @@ contract Earn {
         AllBounties[_index].Organizer = msg.sender;
         AllBounties[_index].ExternalLink = _externalLink;
         AllBounties[_index].StartTime = block.timestamp;
-        AllBounties[_index].EndTime = block.timestamp + _duration;
+        AllBounties[_index].EndTime = block.timestamp + durationInseconds;
         AllBounties[_index].index = _index;
-        AllBounties[_index].AmountInPool = _amountInPool;
-    } //160344
+        AllBounties[_index].AmountInPool = _amountInPool * decimals;
+    }
 
+    function submitBounties(
+        uint _bountyId,
+        string calldata _solution
+    ) external {
+        require(_bountyId < IndexArrayForBounty.length, "Invalid Bounty ID");
 
-    function submitBounties(uint _bountyId, string calldata _solution) external {
-       require(_bountyId < IndexArrayForBounty.length,"Invalid Bounty ID");
+        isParticipantOfBounty[msg.sender][_bountyId] = true;
 
+        submissions.push(
+            Submission({
+                BountyIndex: _bountyId,
+                Participant: msg.sender,
+                Soultion: _solution
+            })
+        );
+    }
 
+    function chooseWinners(
+        uint _bountyId,
+        address[] calldata _winners,
+        uint[] calldata _prizes
+    ) external onlyBountyOrganizer(_bountyId) {
+        require(!isActive(_bountyId), "bounty is still running ");
+        require(_winners.length == _prizes.length, "different array length");
+
+        for (uint i; i < _winners.length; i++) {
+            require(
+                isParticipantOfBounty[_winners[i]][_bountyId],
+                "not a participant"
+            );
+            ClaimablePrize[_winners[i]] = _prizes[i];
+        }
+    }
+
+    function claimPrize() external {
+        uint _toSend = ClaimablePrize[msg.sender];
+
+        require(_toSend >= 0, "No prizes to claim");
+
+        (bool result, ) = payable(msg.sender).call{value: _toSend}("");
+        require(result, "call failed");
     }
 }
