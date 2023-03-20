@@ -3,51 +3,31 @@ const { expect } = require("chai");
 
 describe("Lock", function () {
 
+  let bounty;
+  let owner;
+  let organizer1;
+  let organizer2;
+  let participant1;
+  let participant2;
+  beforeEach(async function () {
+    [owner, organizer1, organizer2, participant1, participant2] = await ethers.getSigners();
 
-  describe("Deployment", function () {
-    it("Should set the right unlockTime", async function () {
+    const Bounty = await ethers.getContractFactory("Earn");
+    bounty = await Bounty.deploy();
+  })
 
-      
-    });
+  describe("Deployment", () => {
 
-    it("Should set the right owner", async function () {
-     
-    });
+    it("should assign the owner", async () => {
+      expect(await bounty.owner()).to.be.equal(owner.address);
+    })
+  })
 
-    it("Should receive and store the funds to lock", async function () {
-       
-    });
+  describe("owner can add organinzer and organizer gets privillege",()=>{
+    
+  })
 
-    it("Should fail if the unlockTime is not in the future", async function () {
-       
-    });
-  });
 
-  describe("Withdrawals", function () {
-    describe("Validations", function () {
-      it("Should revert with the right error if called too soon", async function () {
-         
-      });
 
-      it("Should revert with the right error if called from another account", async function () {
-       
-      });
-
-      it("Shouldn't fail if the unlockTime has arrived and the owner calls it", async function () {
-         
-      });
-    });
-
-    describe("Events", function () {
-      it("Should emit an event on withdrawals", async function () {
-        
-      });
-    });
-
-    describe("Transfers", function () {
-      it("Should transfer the funds to the owner", async function () {
-         
-      });
-    });
-  });
+ 
 });

@@ -2,14 +2,14 @@
 pragma solidity 0.8.19;
 
 contract Earn {
-    address owner;
+    address public owner;
     uint decimals = 10 ** 18;
 
     mapping(address => bool) internal AllowedOrganizer;
     mapping(uint256 => Bounty) public AllBounties;
     mapping(uint256 => uint256) public RemainingPoolPrize;
     mapping(address => uint) public ClaimablePrize;
-    mapping(address => bool) public isParticipant;
+    mapping(address => mapping(uint => bool)) public isParticipantOfBounty;
 
     struct Bounty {
         address Organizer;
@@ -52,7 +52,7 @@ contract Earn {
         owner = msg.sender;
     }
 
-    function isActive(uint256 _index) external view returns (bool) {
+    function isActive(uint256 _index) internal view returns (bool) {
         return AllBounties[_index].EndTime > block.timestamp;
     }
 
@@ -61,7 +61,7 @@ contract Earn {
         owner = _owner;
     }
 
-    function addBountiesEXperiment(
+    function addBounties(
         uint256 _duration,
         string calldata _externalLink,
         uint256 _amountInPool
@@ -87,6 +87,8 @@ contract Earn {
     ) external {
         require(_bountyId < IndexArrayForBounty.length, "Invalid Bounty ID");
 
+        isParticipantOfBounty[msg.sender][_bountyId] = true;
+
         submissions.push(
             Submission({
                 BountyIndex: _bountyId,
@@ -101,8 +103,15 @@ contract Earn {
         address[] calldata _winners,
         uint[] calldata _prizes
     ) external onlyBountyOrganizer(_bountyId) {
+        require(!isActive(_bountyId), "bounty is still running ");
         require(_winners.length == _prizes.length, "different array length");
 
-
+        for (uint i; i < _winners.length; i++) {
+            require(
+                isParticipantOfBounty[_winners[i]][_bountyId],
+                "not a participant"
+            );
+            ClaimablePrize[_winners[i]] = _prizes[i];
+        }
     }
 }
