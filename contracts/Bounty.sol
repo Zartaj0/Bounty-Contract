@@ -61,14 +61,19 @@ contract Earn {
         owner = _owner;
     }
 
+    function addOrganizer(address _organizer) external onlyOwner {
+        AllowedOrganizer[_organizer] = true;
+    }
+
     function addBounties(
-        uint256 _duration,
+        uint256 _durationInDays,
         string calldata _externalLink,
         uint256 _amountInPool
     ) external payable onlyOrganizer {
         require(msg.value == _amountInPool, "Send valid ether amount");
 
         uint256 _index = IndexArrayForBounty.length;
+        uint durationInseconds = _durationInDays days;
         IndexArrayForBounty.push(_index);
 
         RemainingPoolPrize[_index] = msg.value;
@@ -76,7 +81,7 @@ contract Earn {
         AllBounties[_index].Organizer = msg.sender;
         AllBounties[_index].ExternalLink = _externalLink;
         AllBounties[_index].StartTime = block.timestamp;
-        AllBounties[_index].EndTime = block.timestamp + _duration;
+        AllBounties[_index].EndTime = block.timestamp + durationInseconds;
         AllBounties[_index].index = _index;
         AllBounties[_index].AmountInPool = _amountInPool * decimals;
     }
@@ -113,5 +118,14 @@ contract Earn {
             );
             ClaimablePrize[_winners[i]] = _prizes[i];
         }
+    }
+
+    function claimPrize() external {
+        uint _toSend = ClaimablePrize[msg.sender];
+
+        require(_toSend >= 0, "No prizes to claim");
+
+        (bool result, ) = payable(msg.sender).call{value: _toSend}("");
+        require(result, "call failed");
     }
 }
