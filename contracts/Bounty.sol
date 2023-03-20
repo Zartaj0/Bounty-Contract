@@ -3,11 +3,13 @@ pragma solidity 0.8.19;
 
 contract Earn {
     address owner;
+    uint decimals = 10 ** 18;
 
     mapping(address => bool) internal AllowedOrganizer;
     mapping(uint256 => Bounty) public AllBounties;
     mapping(uint256 => uint256) public RemainingPoolPrize;
     mapping(address => uint) public ClaimablePrize;
+    mapping(address => bool) public isParticipant;
 
     struct Bounty {
         address Organizer;
@@ -18,12 +20,14 @@ contract Earn {
         uint256 AmountInPool;
     }
 
-    struct Submission{
+    struct Submission {
+        uint BountyIndex;
         address Participant;
         string Soultion;
     }
-    
+
     uint256[] IndexArrayForBounty;
+    Submission[] submissions;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only Owner");
@@ -32,6 +36,15 @@ contract Earn {
 
     modifier onlyOrganizer() {
         require(AllowedOrganizer[msg.sender], "Only Organizer");
+        _;
+    }
+
+    modifier onlyBountyOrganizer(uint _bountyId) {
+        address _organizer = AllBounties[_bountyId].Organizer;
+        require(
+            msg.sender == _organizer,
+            "you are not the organizer for this bounty"
+        );
         _;
     }
 
@@ -65,12 +78,30 @@ contract Earn {
         AllBounties[_index].StartTime = block.timestamp;
         AllBounties[_index].EndTime = block.timestamp + _duration;
         AllBounties[_index].index = _index;
-        AllBounties[_index].AmountInPool = _amountInPool;
-    } //160344
+        AllBounties[_index].AmountInPool = _amountInPool * decimals;
+    }
 
+    function submitBounties(
+        uint _bountyId,
+        string calldata _solution
+    ) external {
+        require(_bountyId < IndexArrayForBounty.length, "Invalid Bounty ID");
 
-    function submitBounties(uint _bountyId, string calldata _solution) external {
-       require(_bountyId < IndexArrayForBounty.length,"Invalid Bounty ID");
+        submissions.push(
+            Submission({
+                BountyIndex: _bountyId,
+                Participant: msg.sender,
+                Soultion: _solution
+            })
+        );
+    }
+
+    function chooseWinners(
+        uint _bountyId,
+        address[] calldata _winners,
+        uint[] calldata _prizes
+    ) external onlyBountyOrganizer(_bountyId) {
+        require(_winners.length == _prizes.length, "different array length");
 
 
     }
