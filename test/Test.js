@@ -34,7 +34,7 @@ describe("Lock", function () {
       await bounty.addOrganizer(organizer1.address);
     })
     it("only organizer Can add bounty", async () => {
-      expect(await bounty.owner()).to.be.equal(owner.address);
+      expect(await bounty.connect(organizer1).addBounty(3,)).to.be.equal(owner.address);
     })
 
     it("only owner can whitelist organizer", async () => {
