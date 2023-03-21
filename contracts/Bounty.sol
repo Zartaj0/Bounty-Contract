@@ -104,7 +104,7 @@ contract Earn {
         string calldata _solution
     ) external {
         require(_bountyId < IndexArrayForBounty.length, "Invalid Bounty ID");
-
+        require(isActive(_bountyId), "Bounty deadline reached");
         // isParticipantOfBounty[msg.sender][_bountyId] = true;
 
         uint _Id = SubmittedBounties[_bountyId].length;
@@ -129,7 +129,8 @@ contract Earn {
         require(_winners.length == _prizes.length, "different array length");
 
         for (uint i; i < _winners.length; i++) {
-            address _winner = SubmittedBounties[_bountyId][_winners[i]].Participant;
+            address _winner = SubmittedBounties[_bountyId][_winners[i]]
+                .Participant;
             ClaimablePrize[_winner] = _prizes[i];
         }
     }
