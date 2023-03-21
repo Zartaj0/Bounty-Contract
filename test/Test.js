@@ -29,17 +29,42 @@ describe("Lock", function () {
     })
 
   })
-  describe("Organizer privilleges", () => {
+  describe("Organizer & participants privilleges ", () => {
     beforeEach(async () => {
       await bounty.addOrganizer(organizer1.address);
+      await bounty.addOrganizer(organizer2.address);
     })
     it("only organizer Can add bounty", async () => {
-      expect(await bounty.owner()).to.be.equal(owner.address);
+      await expect(bounty.connect(organizer1).addBounties(3, "link", 5, { value: ethers.utils.parseEther("5") })).to.be.fulfilled;
+      await expect(bounty.connect(bob).addBounties(3, "link", 5, { value: ethers.utils.parseEther("5", "ether") })).to.be.revertedWith("Only Organizer");
+      // console.log(await bounty.AllBounties(0)); 
     })
 
-    it("only owner can whitelist organizer", async () => {
-      expect(bounty.addOrganizer(organizer1.address)).to.be.fulfilled;
-      expect(bounty.connect(bob).addOrganizer(organizer1.address)).to.be.reverted;
+    it("participants can submit bounty", async () => {
+      await expect(bounty.connect(organizer1).addBounties(3, "linkBounty", 5, { value: ethers.utils.parseEther("5") })).to.be.fulfilled;
+      await expect(bounty.connect(participant1).submitBounties(0, "LinkSol")).to.be.fulfilled;
+      await expect(bounty.connect(participant2).submitBounties(0, "Link2sol")).to.be.fulfilled;
+      await expect(bounty.connect(bob).submitBounties(0, "Link3SOl")).to.be.fulfilled;
+      await expect(bounty.connect(participant1).submitBounties(0, "Link4Sol")).to.be.fulfilled;
+      // console.log(await bounty.SubmittedBounties(0, 0));
+
+    })
+
+    describe("Choosing Winners", async () => {
+      beforeEach(async () => {
+        await bounty.connect(organizer1).addBounties(3, "link2Bounty", 5, { value: ethers.utils.parseEther("5") })
+        await bounty.connect(organizer2).addBounties(19, "link2Bounty", 5, { value: ethers.utils.parseEther("5") })
+        await bounty.connect(participant1).submitBounties(1, "LinkSol")
+        await bounty.connect(participant2).submitBounties(0, "Link2Sol")
+        await bounty.connect(bob).submitBounties(1, "Link3SSOl")
+        await bounty.connect(participant1).submitBounties(0, "Link4Sol")
+        console.log(await bounty.SubmittedBounties(0,1));
+      })
+
+      it("respective organizers can only choose winners", async ()=>{
+        // await expect(bounty.connect(organizer1).chooseWinner(0,[""]))
+      })
+
     })
 
   })

@@ -2,15 +2,18 @@
 pragma solidity 0.8.19;
 
 contract Earn {
+    //State variables
     address public owner;
     uint decimals = 10 ** 18;
 
+    //Mappings
     mapping(address => bool) internal AllowedOrganizer;
     mapping(uint256 => Bounty) public AllBounties;
     mapping(uint256 => uint256) public RemainingPoolPrize;
     mapping(address => uint) public ClaimablePrize;
-    mapping(address => mapping(uint => bool)) public isParticipantOfBounty;
-
+    // mapping(address => mapping(uint => bool)) public isParticipantOfBounty;
+    mapping(uint => Submission[]) public SubmittedBounties;
+    //Structs
     struct Bounty {
         address Organizer;
         string ExternalLink;
@@ -24,11 +27,13 @@ contract Earn {
         uint BountyIndex;
         address Participant;
         string Soultion;
+        uint Id;
     }
 
+    //Array
     uint256[] IndexArrayForBounty;
-    Submission[] submissions;
 
+    //Modifiers
     modifier onlyOwner() {
         require(msg.sender == owner, "Only Owner");
         _;
@@ -48,14 +53,17 @@ contract Earn {
         _;
     }
 
+    //Constructor
     constructor() {
         owner = msg.sender;
     }
 
+    //View functions
     function isActive(uint256 _index) internal view returns (bool) {
         return AllBounties[_index].EndTime > block.timestamp;
     }
 
+    //functions basic functions
     function changeOwner(address _owner) external onlyOwner {
         require(_owner != address(0), " Zero Adress");
         owner = _owner;
@@ -65,15 +73,19 @@ contract Earn {
         AllowedOrganizer[_organizer] = true;
     }
 
+    // Organizers will add bounties using this
     function addBounties(
         uint256 _durationInDays,
         string calldata _externalLink,
         uint256 _amountInPool
     ) external payable onlyOrganizer {
-        require(msg.value == _amountInPool, "Send valid ether amount");
+        require(
+            msg.value == _amountInPool * decimals,
+            "Send valid ether amount"
+        );
 
         uint256 _index = IndexArrayForBounty.length;
-        uint durationInseconds = _durationInDays days;
+        uint durationInseconds = _durationInDays * 1 days;
         IndexArrayForBounty.push(_index);
 
         RemainingPoolPrize[_index] = msg.value;
@@ -86,40 +98,44 @@ contract Earn {
         AllBounties[_index].AmountInPool = _amountInPool * decimals;
     }
 
+    //Participants will submit bounty solutions through this function
     function submitBounties(
         uint _bountyId,
         string calldata _solution
     ) external {
         require(_bountyId < IndexArrayForBounty.length, "Invalid Bounty ID");
+        require(isActive(_bountyId), "Bounty deadline reached");
+        // isParticipantOfBounty[msg.sender][_bountyId] = true;
 
-        isParticipantOfBounty[msg.sender][_bountyId] = true;
+        uint _Id = SubmittedBounties[_bountyId].length;
 
-        submissions.push(
+        SubmittedBounties[_bountyId].push(
             Submission({
                 BountyIndex: _bountyId,
                 Participant: msg.sender,
-                Soultion: _solution
+                Soultion: _solution,
+                Id: _Id
             })
         );
     }
 
+    //Organizer will declare winners using this function
     function chooseWinners(
         uint _bountyId,
-        address[] calldata _winners,
+        uint[] calldata _winners,
         uint[] calldata _prizes
     ) external onlyBountyOrganizer(_bountyId) {
         require(!isActive(_bountyId), "bounty is still running ");
         require(_winners.length == _prizes.length, "different array length");
 
         for (uint i; i < _winners.length; i++) {
-            require(
-                isParticipantOfBounty[_winners[i]][_bountyId],
-                "not a participant"
-            );
-            ClaimablePrize[_winners[i]] = _prizes[i];
+            address _winner = SubmittedBounties[_bountyId][_winners[i]]
+                .Participant;
+            ClaimablePrize[_winner] = _prizes[i];
         }
     }
 
+    //Participants will be able to claim their prizes from this function
     function claimPrize() external {
         uint _toSend = ClaimablePrize[msg.sender];
 
