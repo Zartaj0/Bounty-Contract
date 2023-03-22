@@ -11,7 +11,6 @@ contract Earn {
     mapping(uint256 => Bounty) public AllBounties;
     mapping(uint256 => uint256) public RemainingPoolPrize;
     mapping(address => uint) public ClaimablePrize;
-    // mapping(address => mapping(uint => bool)) public isParticipantOfBounty;
     mapping(uint => Submission[]) public SubmittedBounties;
     //Structs
     struct Bounty {
@@ -21,6 +20,7 @@ contract Earn {
         uint256 EndTime;
         uint256 index;
         uint256 AmountInPool;
+        bool ResultDeclared;
     }
 
     struct Submission {
@@ -31,7 +31,7 @@ contract Earn {
     }
 
     //Array
-    uint256[] IndexArrayForBounty;
+    uint256[] public IndexArrayForBounty;
 
     //Modifiers
     modifier onlyOwner() {
@@ -96,6 +96,7 @@ contract Earn {
         AllBounties[_index].EndTime = block.timestamp + durationInseconds;
         AllBounties[_index].index = _index;
         AllBounties[_index].AmountInPool = _amountInPool * decimals;
+        AllBounties[_index].ResultDeclared = false;
     }
 
     //Participants will submit bounty solutions through this function
@@ -125,14 +126,17 @@ contract Earn {
         uint[] calldata _winners,
         uint[] calldata _prizes
     ) external onlyBountyOrganizer(_bountyId) {
-        require(!isActive(_bountyId), "bounty is still running ");
+        require(!isActive(_bountyId), "bounty is still running");
         require(_winners.length == _prizes.length, "different array length");
+        require(!AllBounties[_bountyId].ResultDeclared,"winners already declared" );
 
         for (uint i; i < _winners.length; i++) {
             address _winner = SubmittedBounties[_bountyId][_winners[i]]
                 .Participant;
-            ClaimablePrize[_winner] = _prizes[i];
+            ClaimablePrize[_winner] += _prizes[i] *decimals;
         }
+        AllBounties[_bountyId].ResultDeclared = true;
+
     }
 
     //Participants will be able to claim their prizes from this function
