@@ -8,7 +8,7 @@ contract Earn {
 
     //Mappings
     mapping(address => bool) internal AllowedOrganizer;
-    mapping(address => bool) internal AllowedPartcipant;
+    mapping(address => bool) internal AllowedParticipant;
     mapping(uint256 => Bounty) public AllBounties;
     mapping(uint256 => uint256) public RemainingPoolPrize;
     mapping(address => uint) public ClaimablePrize;
@@ -61,7 +61,7 @@ contract Earn {
     }
 
     modifier onlyParticipant() {
-        require(AllowedPartcipant[msg.sender], "Only Organizer");
+        require(AllowedParticipant[msg.sender], "Only Organizer");
         _;
     }
 
@@ -95,7 +95,7 @@ contract Earn {
     }
 
     function addParticipant(address _organizer) internal onlyOwner {
-        AllowedOrganizer[_organizer] = true;
+        AllowedParticipant[_organizer] = true;
     }
 
     //APply to become an organizer or participant
