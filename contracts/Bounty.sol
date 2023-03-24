@@ -61,7 +61,7 @@ contract Earn {
     }
 
     modifier onlyParticipant() {
-        require(AllowedParticipant[msg.sender], "Only Organizer");
+        require(AllowedParticipant[msg.sender], "Only Participant");
         _;
     }
 
