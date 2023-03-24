@@ -51,6 +51,8 @@ describe("Lock", function () {
       await bounty.approveRequests(2)
       await bounty.connect(participant2).getVerified(1, "link");
       await bounty.approveRequests(3)
+      await bounty.connect(participant3).getVerified(1, "link");
+      await bounty.approveRequests(4)
 
     })
     it("only organizer Can add bounty", async () => {
@@ -71,6 +73,7 @@ describe("Lock", function () {
 
     describe("Choosing Winners", async () => {
       beforeEach(async () => {
+     
         await bounty.connect(organizer1).addBounties(3, "link2Bounty", 5, { value: ethers.utils.parseEther("5") });
          await bounty.connect(organizer2).addBounties(19, "link2Bounty", 15, { value: ethers.utils.parseEther("15") });
         await bounty.connect(participant1).submitBounties(0, "LinkSol");
@@ -85,7 +88,7 @@ describe("Lock", function () {
       })
 
       it("contract should have equivallent funds", async () => {
-        expect(await ethers.provider.getBalance(bounty.address)).to.be.equal(ethers.utils.parseEther("5"));
+        expect(await ethers.provider.getBalance(bounty.address)).to.be.equal(ethers.utils.parseEther("20"));
       })
 
       it("respective organizers can only choose winners and only after the bounty is over", async () => {
