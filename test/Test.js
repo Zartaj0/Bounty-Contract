@@ -130,9 +130,9 @@ describe("Lock", function () {
 
         it("user can withdraw their funds", async () => {
 
-          console.log(await ethers.provider.getBalance(participant1.address)); 
+         // console.log(await ethers.provider.getBalance(participant1.address)); 
           await bounty.connect(participant1).claimPrize();
-          console.log(await ethers.provider.getBalance(participant1.address)); 
+          //console.log(await ethers.provider.getBalance(participant1.address)); 
 
         })
 
@@ -142,7 +142,7 @@ describe("Lock", function () {
           let receipt = await tx.wait();
           let gasCost = receipt.gasUsed.mul(receipt.effectiveGasPrice);
           expect(await ethers.provider.getBalance(participant1.address)).to.be.equal(balance1.add(ethers.utils.parseEther("2")).sub(gasCost));
-          console.log(await ethers.provider.getBalance(bounty.address))
+          //console.log(await ethers.provider.getBalance(bounty.address))
 
         })
         it("user2 can withdraw their funds", async () => {
@@ -157,8 +157,8 @@ describe("Lock", function () {
           let tx = await bounty.connect(participant3).claimPrize();
           let receipt = await tx.wait();
           let gasCost = receipt.gasUsed.mul(receipt.effectiveGasPrice);
-
           expect(await ethers.provider.getBalance(participant3.address)).to.be.equal(balance3.add(ethers.utils.parseEther("8")).sub(gasCost));
+          await expect(bounty.connect(participant3).claimPrize()).to.be.reverted;
 
         })
       })

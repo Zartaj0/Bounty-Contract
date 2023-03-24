@@ -5,9 +5,22 @@ contract Earn {
     //State variables
     address public owner;
 
-event BountyCreated(address indexed createdBy, uint indexed _bountyId, uint indexed EndTime, uint startTime);
-event NewSubmission(address indexed SubmittedBy, uint indexed SubmitIndex, uint indexed SubmitTime);
-event WinnersDeclared(uint indexed _bountyId, uint[] indexed _ids, uint[] indexed _amounts);
+    event BountyCreated(
+        address indexed createdBy,
+        uint indexed _bountyId,
+        uint indexed EndTime,
+        uint startTime
+    );
+    event NewSubmission(
+        address indexed SubmittedBy,
+        uint indexed SubmitIndex,
+        uint indexed SubmitTime
+    );
+    event WinnersDeclared(
+        uint indexed _bountyId,
+        uint[] indexed _ids,
+        uint[] indexed _amounts
+    );
     //Mappings
     mapping(address => bool) internal AllowedOrganizer;
     mapping(address => bool) internal AllowedParticipant;
@@ -111,7 +124,7 @@ event WinnersDeclared(uint indexed _bountyId, uint[] indexed _ids, uint[] indexe
     }
 
     function approveRequests(uint _id) external onlyOwner {
-        require(_id< IndexArrayForApplication.length,"invalid id");
+        require(_id < IndexArrayForApplication.length, "invalid id");
         if (ApplicationList[_id].ApplyType == ApplicationType.Organizer) {
             addOrganizer(ApplicationList[_id].Applicant);
         } else {
@@ -144,7 +157,12 @@ event WinnersDeclared(uint indexed _bountyId, uint[] indexed _ids, uint[] indexe
         AllBounties[_index].AmountInPool = _amountInPool * 10 ** 18;
         AllBounties[_index].ResultDeclared = false;
 
-        emit BountyCreated(msg.sender, _index, block.timestamp + durationInseconds, block.timestamp);
+        emit BountyCreated(
+            msg.sender,
+            _index,
+            block.timestamp + durationInseconds,
+            block.timestamp
+        );
     }
 
     //Participants will submit bounty solutions through this function
@@ -197,17 +215,22 @@ event WinnersDeclared(uint indexed _bountyId, uint[] indexed _ids, uint[] indexe
     function claimPrize() external onlyParticipant {
         uint _toSend = ClaimablePrize[msg.sender];
 
-        require(_toSend >= 0, "No prizes to claim");
-
+        require(_toSend > 0, "No prizes to claim");
+        ClaimablePrize[msg.sender] = 0;
         (bool result, ) = payable(msg.sender).call{value: _toSend}("");
         require(result, "call failed");
     }
 
-    function withdrawRemainingAmount(uint _bountyId) external onlyBountyOrganizer(_bountyId){
-        uint _amount =RemainingPoolPrize[_bountyId];
-        if(_amount > 0){
-            (bool success,)= payable(msg.sender).call{value :_amount}("");
-            require(success,"call failed");
+    function withdrawRemainingAmount(
+        uint _bountyId
+    ) external onlyBountyOrganizer(_bountyId) {
+        uint _amount = RemainingPoolPrize[_bountyId];
+        if (_amount > 0) {
+            RemainingPoolPrize[_bountyId] =0;
+            (bool success, ) = payable(msg.sender).call{value: _amount}("");
+            require(success, "call failed");
+        } else{
+            revert("No amount to claim");
         }
     }
 }
