@@ -23,16 +23,35 @@ describe("Lock", function () {
       expect(await bounty.owner()).to.be.equal(owner.address);
     })
 
-    it("only owner can whitelist organizer", async () => {
-      expect(bounty.addOrganizer(organizer1.address)).to.be.fulfilled;
-      expect(bounty.connect(bob).addOrganizer(organizer1.address)).to.be.reverted;
+  })
+
+  describe("users can apply and owner can approve", () => {
+    it("organizer application should be stored and approved", async () => {
+      await expect(bounty.connect(organizer1).getVerified(0, "link")).to.be.fulfilled;
+      //console.log(await bounty.ApplicationList[0]);
+      await expect(bounty.approveRequests(0)).to.be.fulfilled;
+    })
+    it("participants application should be stored and approved", async () => {
+      await expect(bounty.connect(participant1).getVerified(1, "link")).to.be.fulfilled;
+      //console.log(await bounty.ApplicationList(0));
+      await expect(bounty.approveRequests(0)).to.be.fulfilled;
     })
 
+
   })
+
   describe("Organizer & participants privilleges ", () => {
     beforeEach(async () => {
-      await bounty.addOrganizer(organizer1.address);
-      await bounty.addOrganizer(organizer2.address);
+      await bounty.connect(organizer1).getVerified(0, "link");
+      await bounty.approveRequests(0)
+      await bounty.connect(organizer2).getVerified(0, "link");
+      await bounty.approveRequests(1)
+
+      await bounty.connect(participant1).getVerified(1, "link");
+      await bounty.approveRequests(2)
+      await bounty.connect(participant2).getVerified(1, "link");
+      await bounty.approveRequests(3)
+
     })
     it("only organizer Can add bounty", async () => {
       await expect(bounty.connect(organizer1).addBounties(3, "link", 5, { value: ethers.utils.parseEther("5") })).to.be.fulfilled;
@@ -44,16 +63,16 @@ describe("Lock", function () {
       await expect(bounty.connect(organizer1).addBounties(3, "linkBounty", 5, { value: ethers.utils.parseEther("5") })).to.be.fulfilled;
       await expect(bounty.connect(participant1).submitBounties(0, "LinkSol")).to.be.fulfilled;
       await expect(bounty.connect(participant2).submitBounties(0, "Link2sol")).to.be.fulfilled;
-      await expect(bounty.connect(bob).submitBounties(0, "Link3SOl")).to.be.fulfilled;
+      await expect(bounty.connect(bob).submitBounties(0, "Link3SOl")).to.be.reverted;
       await expect(bounty.connect(participant1).submitBounties(0, "Link4Sol")).to.be.fulfilled;
-      // console.log(await bounty.SubmittedBounties(0, 0));
+      //console.log(await bounty.SubmittedBounties(0, 0));
 
     })
 
     describe("Choosing Winners", async () => {
       beforeEach(async () => {
         await bounty.connect(organizer1).addBounties(3, "link2Bounty", 5, { value: ethers.utils.parseEther("5") });
-        await bounty.connect(organizer2).addBounties(19, "link2Bounty", 15, { value: ethers.utils.parseEther("15") });
+         await bounty.connect(organizer2).addBounties(19, "link2Bounty", 15, { value: ethers.utils.parseEther("15") });
         await bounty.connect(participant1).submitBounties(0, "LinkSol");
         await bounty.connect(participant2).submitBounties(0, "Link2Sol");
         await bounty.connect(participant3).submitBounties(0, "LinkSol");
@@ -61,10 +80,12 @@ describe("Lock", function () {
         await bounty.connect(participant2).submitBounties(1, "Link4Sol");
         await bounty.connect(participant3).submitBounties(1, "Link4Sol");
         // console.log(await bounty.SubmittedBounties(0, 1));
+      console.log(await bounty.AllBounties(0)); 
+
       })
 
       it("contract should have equivallent funds", async () => {
-        expect(await ethers.provider.getBalance(bounty.address)).to.be.equal(ethers.utils.parseEther("20"));
+        expect(await ethers.provider.getBalance(bounty.address)).to.be.equal(ethers.utils.parseEther("5"));
       })
 
       it("respective organizers can only choose winners and only after the bounty is over", async () => {
@@ -104,13 +125,13 @@ describe("Lock", function () {
         })
 
 
-        // it("user can withdraw their funds", async () => {
+        it("user can withdraw their funds", async () => {
 
-        //   console.log(await ethers.provider.getBalance(participant1.address)); 
-        //   await bounty.connect(participant1).claimPrize();
-        //   console.log(await ethers.provider.getBalance(participant1.address)); 
+          console.log(await ethers.provider.getBalance(participant1.address)); 
+          await bounty.connect(participant1).claimPrize();
+          console.log(await ethers.provider.getBalance(participant1.address)); 
 
-        // })
+        })
 
         it("user1 can withdraw their funds", async () => {
           let balance1 = await ethers.provider.getBalance(participant1.address);
@@ -119,7 +140,7 @@ describe("Lock", function () {
           let gasCost = receipt.gasUsed.mul(receipt.effectiveGasPrice);
           expect(await ethers.provider.getBalance(participant1.address)).to.be.equal(balance1.add(ethers.utils.parseEther("2")).sub(gasCost));
           console.log(await ethers.provider.getBalance(bounty.address))
-        
+
         })
         it("user2 can withdraw their funds", async () => {
           let balance2 = await ethers.provider.getBalance(participant2.address);
@@ -135,7 +156,7 @@ describe("Lock", function () {
           let gasCost = receipt.gasUsed.mul(receipt.effectiveGasPrice);
 
           expect(await ethers.provider.getBalance(participant3.address)).to.be.equal(balance3.add(ethers.utils.parseEther("8")).sub(gasCost));
-        
+
         })
       })
 
