@@ -4,8 +4,10 @@ pragma solidity 0.8.19;
 contract Earn {
     //State variables
     address public owner;
-    uint decimals = 10 ** 18;
 
+event BountyCreated(address indexed createdBy, uint indexed _bountyId, uint indexed EndTime, uint startTime);
+event NewSubmission(address indexed SubmittedBy, uint indexed SubmitIndex, uint indexed SubmitTime);
+event WinnersDeclared(uint indexed _bountyId, uint[] indexed _ids, uint[] indexed _amounts);
     //Mappings
     mapping(address => bool) internal AllowedOrganizer;
     mapping(address => bool) internal AllowedParticipant;
@@ -124,7 +126,7 @@ contract Earn {
         uint256 _amountInPool
     ) external payable onlyOrganizer {
         require(
-            msg.value == _amountInPool * decimals,
+            msg.value == _amountInPool * 10 ** 18,
             "Send valid ether amount"
         );
 
@@ -139,8 +141,10 @@ contract Earn {
         AllBounties[_index].StartTime = block.timestamp;
         AllBounties[_index].EndTime = block.timestamp + durationInseconds;
         AllBounties[_index].index = _index;
-        AllBounties[_index].AmountInPool = _amountInPool * decimals;
+        AllBounties[_index].AmountInPool = _amountInPool * 10 ** 18;
         AllBounties[_index].ResultDeclared = false;
+
+        emit BountyCreated(msg.sender, _index, block.timestamp + durationInseconds, block.timestamp);
     }
 
     //Participants will submit bounty solutions through this function
@@ -162,6 +166,8 @@ contract Earn {
                 Id: _Id
             })
         );
+
+        emit NewSubmission(msg.sender, _Id, block.timestamp);
     }
 
     //Organizer will declare winners using this function
@@ -180,9 +186,11 @@ contract Earn {
         for (uint i; i < _winners.length; i++) {
             address _winner = SubmittedBounties[_bountyId][_winners[i]]
                 .Participant;
-            ClaimablePrize[_winner] += _prizes[i] * decimals;
+            ClaimablePrize[_winner] += _prizes[i] * 10 ** 18;
+            RemainingPoolPrize[_bountyId] -= _prizes[i] * 10 ** 18;
         }
         AllBounties[_bountyId].ResultDeclared = true;
+        emit WinnersDeclared(_bountyId, _winners, _prizes);
     }
 
     //Participants will be able to claim their prizes from this function
@@ -193,5 +201,13 @@ contract Earn {
 
         (bool result, ) = payable(msg.sender).call{value: _toSend}("");
         require(result, "call failed");
+    }
+
+    function withdrawRemainingAmount(uint _bountyId) external onlyBountyOrganizer(_bountyId){
+        uint _amount =RemainingPoolPrize[_bountyId];
+        if(_amount > 0){
+            (bool success,)= payable(msg.sender).call{value :_amount}("");
+            require(success,"call failed");
+        }
     }
 }
