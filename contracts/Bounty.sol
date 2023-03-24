@@ -8,10 +8,19 @@ contract Earn {
 
     //Mappings
     mapping(address => bool) internal AllowedOrganizer;
+    mapping(address => bool) internal AllowedParticipant;
     mapping(uint256 => Bounty) public AllBounties;
     mapping(uint256 => uint256) public RemainingPoolPrize;
     mapping(address => uint) public ClaimablePrize;
     mapping(uint => Submission[]) public SubmittedBounties;
+    mapping(uint => Application) public ApplicationList;
+
+    //Enum
+    enum ApplicationType {
+        Organizer,
+        Participant
+    }
+
     //Structs
     struct Bounty {
         address Organizer;
@@ -30,8 +39,15 @@ contract Earn {
         uint Id;
     }
 
+    struct Application {
+        address Applicant;
+        string LinkToId;
+        ApplicationType ApplyType;
+    }
+
     //Array
     uint256[] public IndexArrayForBounty;
+    uint256[] public IndexArrayForApplication;
 
     //Modifiers
     modifier onlyOwner() {
@@ -41,6 +57,11 @@ contract Earn {
 
     modifier onlyOrganizer() {
         require(AllowedOrganizer[msg.sender], "Only Organizer");
+        _;
+    }
+
+    modifier onlyParticipant() {
+        require(AllowedParticipant[msg.sender], "Only Participant");
         _;
     }
 
@@ -69,8 +90,31 @@ contract Earn {
         owner = _owner;
     }
 
-    function addOrganizer(address _organizer) external onlyOwner {
+    function addOrganizer(address _organizer) internal onlyOwner {
         AllowedOrganizer[_organizer] = true;
+    }
+
+    function addParticipant(address _organizer) internal onlyOwner {
+        AllowedParticipant[_organizer] = true;
+    }
+
+    //APply to become an organizer or participant
+    function getVerified(ApplicationType _type, string memory _link) external {
+        uint _index = IndexArrayForApplication.length;
+        IndexArrayForApplication.push(_index);
+
+        ApplicationList[_index].Applicant = msg.sender;
+        ApplicationList[_index].ApplyType = _type;
+        ApplicationList[_index].LinkToId = _link;
+    }
+
+    function approveRequests(uint _id) external onlyOwner {
+        require(_id< IndexArrayForApplication.length,"invalid id");
+        if (ApplicationList[_id].ApplyType == ApplicationType.Organizer) {
+            addOrganizer(ApplicationList[_id].Applicant);
+        } else {
+            addParticipant(ApplicationList[_id].Applicant);
+        }
     }
 
     // Organizers will add bounties using this
@@ -103,7 +147,7 @@ contract Earn {
     function submitBounties(
         uint _bountyId,
         string calldata _solution
-    ) external {
+    ) external onlyParticipant {
         require(_bountyId < IndexArrayForBounty.length, "Invalid Bounty ID");
         require(isActive(_bountyId), "Bounty deadline reached");
         // isParticipantOfBounty[msg.sender][_bountyId] = true;
@@ -128,19 +172,21 @@ contract Earn {
     ) external onlyBountyOrganizer(_bountyId) {
         require(!isActive(_bountyId), "bounty is still running");
         require(_winners.length == _prizes.length, "different array length");
-        require(!AllBounties[_bountyId].ResultDeclared,"winners already declared" );
+        require(
+            !AllBounties[_bountyId].ResultDeclared,
+            "winners already declared"
+        );
 
         for (uint i; i < _winners.length; i++) {
             address _winner = SubmittedBounties[_bountyId][_winners[i]]
                 .Participant;
-            ClaimablePrize[_winner] += _prizes[i] *decimals;
+            ClaimablePrize[_winner] += _prizes[i] * decimals;
         }
         AllBounties[_bountyId].ResultDeclared = true;
-
     }
 
     //Participants will be able to claim their prizes from this function
-    function claimPrize() external {
+    function claimPrize() external onlyParticipant {
         uint _toSend = ClaimablePrize[msg.sender];
 
         require(_toSend >= 0, "No prizes to claim");
